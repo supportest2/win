@@ -21,25 +21,15 @@ jobs:
           exit 1
         }
 
-        # Load Windows Forms assembly for SendKeys
         Add-Type -AssemblyName System.Windows.Forms
 
-        # Start the process
         $process = Start-Process $Path -ArgumentList "--code=${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}", "--redirect-url=https://remotedesktop.google.com/_/oauthredirect", "--name=$env:COMPUTERNAME" -PassThru
 
-        # Wait a bit for the PIN prompt
         Start-Sleep -Seconds 5
-
-        # Send PIN (replace 123456 with your desired PIN)
         [System.Windows.Forms.SendKeys]::SendWait('123456{ENTER}')
-
-        # Wait again for potential confirmation
         Start-Sleep -Seconds 2
-
-        # Send PIN again to confirm
         [System.Windows.Forms.SendKeys]::SendWait('123456{ENTER}')
 
-        # Wait for the process to exit
         $process.WaitForExit()
 
         if ($process.ExitCode -ne 0) {
@@ -50,9 +40,38 @@ jobs:
       env:
         CHROME_REMOTE_DESKTOP_CODE: ${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}
 
-    - name: Enable Remote Desktop
+    - name: Configure and Start Chrome Remote Desktop Service
+      run: |
+        $serviceName = "chromoting"
+        $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+        if ($service -eq $null) {
+          Write-Error "Chrome Remote Desktop service not found"
+          exit 1
+        }
+        
+        Set-Service -Name $serviceName -StartupType Automatic
+        Start-Service -Name $serviceName
+        
+        $status = (Get-Service -Name $serviceName).Status
+        Write-Output "Chrome Remote Desktop service status: $status"
+        
+        if ($status -ne "Running") {
+          Write-Error "Failed to start Chrome Remote Desktop service"
+          exit 1
+        }
+      shell: powershell
+
+    - name: Enable Remote Desktop and Configure Firewall
       run: |
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+        
+        New-NetFirewallRule -DisplayName "Chrome Remote Desktop" -Direction Inbound -Program "C:\Program Files (x86)\Google\Chrome Remote Desktop\CurrentVersion\remoting_host.exe" -Action Allow
+      shell: powershell
+
+    - name: Display Network Information
+      run: |
+        ipconfig /all
+        netstat -ano | findstr :3389
       shell: powershell
