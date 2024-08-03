@@ -1,5 +1,3 @@
-name: Windows 10 Chrome Remote Desktop
-
 on: [push, workflow_dispatch]
 
 jobs:
@@ -15,30 +13,37 @@ jobs:
         Invoke-WebRequest -Uri $ChromeRemoteDesktopURL -OutFile $OutputPath
 
     - name: Install Chrome Remote Desktop
-      run: Start-Process msiexec.exe -ArgumentList "/i chromeremotedesktophost.msi /qn /norestart /l*v install.log INSTALLDIR=C:\Program Files\Google\Chrome Remote Desktop" -Wait
+      run: Start-Process msiexec.exe -ArgumentList "/i chromeremotedesktophost.msi /qn /norestart /l*v install.log INSTALLDIR='C:\Program Files\Google\Chrome Remote Desktop'" -Wait
+      shell: powershell
+
+    - name: Check installation path
+      run: |
+        $ChromeRemoteDesktopPath = "C:\Program Files\Google\Chrome Remote Desktop"
+        if (-Not (Test-Path -Path $ChromeRemoteDesktopPath)) {
+          Write-Error "Installation path '$ChromeRemoteDesktopPath' does not exist."
+        } else {
+          Write-Output "Installation path '$ChromeRemoteDesktopPath' exists."
+        }
       shell: powershell
 
     - name: List files and folders in installation folder
       run: |
         $ChromeRemoteDesktopPath = "C:\Program Files\Google\Chrome Remote Desktop"
-        if (Test-Path -Path $ChromeRemoteDesktopPath) {
-          Get-ChildItem -Path $ChromeRemoteDesktopPath -Recurse | Select-Object -Property FullName
-        } else {
-          Write-Host "The installation directory does not exist."
-        }
+        Get-ChildItem -Path $ChromeRemoteDesktopPath -Recurse | Select-Object -Property FullName
       shell: powershell
 
     - name: Set up Chrome Remote Desktop
       run: |
+        $ChromeRemoteDesktopPath = "C:\Program Files\Google\Chrome Remote Desktop"
         $RemotingStartPath = Join-Path -Path $ChromeRemoteDesktopPath -ChildPath "remoting_start.exe"
         & "$RemotingStartPath" --code="${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$env:COMPUTERNAME
       shell: powershell
       env:
         CHROME_REMOTE_DESKTOP_CODE: ${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}
-        ChromeRemoteDesktopPath: "C:\Program Files\Google\Chrome Remote Desktop"
 
     - name: Enable Remote Desktop
       run: |
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+      shell: powershell
