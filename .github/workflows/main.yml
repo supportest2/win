@@ -20,9 +20,14 @@ jobs:
         
     - name: Set up Chrome Remote Desktop
       run: |
-        $ChromeRemoteDesktopPath = "C:\Program Files (x86)\Google\Chrome Remote Desktop"
-        $VersionFolder = Get-ChildItem -Path $ChromeRemoteDesktopPath -Directory | Sort-Object -Property Name -Descending | Select-Object -First 1
-        $RemotingStartPath = Join-Path -Path $ChromeRemoteDesktopPath -ChildPath "$VersionFolder\remoting_start.exe"
+        $ChromeRemoteDesktopPath = "$env:ProgramFiles(x86)\Google\Chrome Remote Desktop"
+        $CurrentVersionPath = "$ChromeRemoteDesktopPath\CurrentVersion"
+        if (Test-Path $CurrentVersionPath) {
+          $RemotingStartPath = "$CurrentVersionPath\remoting_start.exe"
+        } else {
+          $VersionFolder = Get-ChildItem -Path $ChromeRemoteDesktopPath -Directory | Sort-Object -Property Name -Descending | Select-Object -First 1
+          $RemotingStartPath = Join-Path -Path $ChromeRemoteDesktopPath -ChildPath "$VersionFolder\remoting_start.exe"
+        }
         & "$RemotingStartPath" --code="${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$env:computername
       shell: powershell
       env:
