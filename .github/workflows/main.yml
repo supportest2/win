@@ -16,11 +16,34 @@ jobs:
     - name: Set up Chrome Remote Desktop
       run: |
         $Path = "C:\Program Files (x86)\Google\Chrome Remote Desktop\CurrentVersion\remoting_start_host.exe"
-        if (Test-Path $Path) {
-          Write-Output "Found remoting_start_host.exe at: $Path"
-          & $Path --code="${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$env:COMPUTERNAME
-        } else {
+        if (-not (Test-Path $Path)) {
           Write-Error "Could not find remoting_start_host.exe at expected location: $Path"
+          exit 1
+        }
+
+        # Load Windows Forms assembly for SendKeys
+        Add-Type -AssemblyName System.Windows.Forms
+
+        # Start the process
+        $process = Start-Process $Path -ArgumentList "--code=${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}", "--redirect-url=https://remotedesktop.google.com/_/oauthredirect", "--name=$env:COMPUTERNAME" -PassThru
+
+        # Wait a bit for the PIN prompt
+        Start-Sleep -Seconds 5
+
+        # Send PIN (replace 123456 with your desired PIN)
+        [System.Windows.Forms.SendKeys]::SendWait('123456{ENTER}')
+
+        # Wait again for potential confirmation
+        Start-Sleep -Seconds 2
+
+        # Send PIN again to confirm
+        [System.Windows.Forms.SendKeys]::SendWait('123456{ENTER}')
+
+        # Wait for the process to exit
+        $process.WaitForExit()
+
+        if ($process.ExitCode -ne 0) {
+          Write-Error "Chrome Remote Desktop setup failed with exit code: $($process.ExitCode)"
           exit 1
         }
       shell: powershell
