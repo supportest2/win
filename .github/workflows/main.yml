@@ -21,6 +21,7 @@ jobs:
     - name: Set up Chrome Remote Desktop
       run: |
         & "C:\Program Files (x86)\Google\Chrome Remote Desktop\remoting_start.bat" --access-code=${{ secrets.CHROME_REMOTE_DESKTOP_PIN }}
+      shell: powershell
       env:
         CHROME_REMOTE_DESKTOP_PIN: ${{ secrets.CHROME_REMOTE_DESKTOP_PIN }}
 
