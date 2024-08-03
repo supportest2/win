@@ -15,12 +15,12 @@ jobs:
         Invoke-WebRequest -Uri $ChromeRemoteDesktopURL -OutFile $OutputPath
 
     - name: Install Chrome Remote Desktop
-      run: Start-Process msiexec.exe -ArgumentList "/i chromeremotedesktophost.msi /qn" -Wait
+      run: Start-Process msiexec.exe -ArgumentList "/i chromeremotedesktophost.msi /qn /norestart /l*v install.log INSTALLDIR=C:\Custom\ChromeRemoteDesktop" -Wait
       shell: powershell
 
     - name: Set up Chrome Remote Desktop
       run: |
-        $ChromeRemoteDesktopPath = "$env:ProgramFiles(x86)\Google\Chrome Remote Desktop"
+        $ChromeRemoteDesktopPath = "C:\Custom\ChromeRemoteDesktop"
         $RemotingStartPath = Join-Path -Path $ChromeRemoteDesktopPath -ChildPath "remoting_start.exe"
         & "$RemotingStartPath" --code="${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$env:COMPUTERNAME
       shell: powershell
