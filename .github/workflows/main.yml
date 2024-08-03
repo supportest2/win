@@ -1,0 +1,35 @@
+name: Windows 10 Chrome Remote Desktop
+
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 9999
+
+    steps:
+    - name: Download Chrome Remote Desktop
+      run: |
+        $ChromeRemoteDesktopURL = "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi"
+        $OutputPath = "chromeremotedesktophost.msi"
+        Invoke-WebRequest -Uri $ChromeRemoteDesktopURL -OutFile $OutputPath
+
+    - name: Install Chrome Remote Desktop
+      run: |
+        Start-Process msiexec.exe -ArgumentList "/i chromeremotedesktophost.msi /qn" -Wait
+
+    - name: Set up Chrome Remote Desktop
+      run: |
+        & "C:\Program Files (x86)\Google\Chrome Remote Desktop\remoting_start.bat" --access-code=${{ secrets.CHROME_REMOTE_DESKTOP_PIN }}
+      env:
+        CHROME_REMOTE_DESKTOP_PIN: ${{ secrets.CHROME_REMOTE_DESKTOP_PIN }}
+
+    - name: Enable Remote Desktop
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+
+    - name: Set up user authentication
+      run: |
+        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "@cyb3rking" -Force)
