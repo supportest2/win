@@ -5,39 +5,17 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 9999
     steps:
-    - name: Download Chrome Remote Desktop
+    - name: Download and Install Chrome Remote Desktop
       run: |
-        $ChromeRemoteDesktopURL = "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi"
-        $OutputPath = "chromeremotedesktophost.msi"
-        Invoke-WebRequest -Uri $ChromeRemoteDesktopURL -OutFile $OutputPath
-      shell: powershell
-
-    - name: Install Chrome Remote Desktop
-      run: Start-Process msiexec.exe -ArgumentList "/i chromeremotedesktophost.msi /qn /norestart /l*v install.log INSTALLDIR='C:\Program Files (x86)\Google\Chrome Remote Desktop'" -Wait -NoNewWindow
-      shell: powershell
-
-    - name: Check installation path
-      run: |
-        $ChromeRemoteDesktopPath = "C:\Program Files (x86)\Google\Chrome Remote Desktop"
-        if (-Not (Test-Path -Path $ChromeRemoteDesktopPath)) {
-          Write-Error "Installation path '$ChromeRemoteDesktopPath' does not exist."
-          exit 1
-        } else {
-          Write-Output "Installation path '$ChromeRemoteDesktopPath' exists."
-        }
-      shell: powershell
-
-    - name: List files and folders in installation folder
-      run: |
-        $ChromeRemoteDesktopPath = "C:\Program Files (x86)\Google\Chrome Remote Desktop"
-        Get-ChildItem -Path $ChromeRemoteDesktopPath -Recurse | Select-Object -Property FullName
+        $URL = "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi"
+        Invoke-WebRequest -Uri $URL -OutFile "chromeremotedesktophost.msi"
+        Start-Process msiexec.exe -ArgumentList "/i chromeremotedesktophost.msi /qn /norestart" -Wait -NoNewWindow
       shell: powershell
 
     - name: Set up Chrome Remote Desktop
       run: |
-        $ChromeRemoteDesktopPath = "C:\Program Files (x86)\Google\Chrome Remote Desktop"
-        $RemotingStartPath = Join-Path -Path $ChromeRemoteDesktopPath -ChildPath "remoting_start_host.exe"
-        & "$RemotingStartPath" --code="${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$env:COMPUTERNAME
+        $Path = "C:\Program Files (x86)\Google\Chrome Remote Desktop\remoting_start_host.exe"
+        & $Path --code="${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$env:COMPUTERNAME
       shell: powershell
       env:
         CHROME_REMOTE_DESKTOP_CODE: ${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}
