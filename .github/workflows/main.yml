@@ -18,9 +18,14 @@ jobs:
       run: Start-Process msiexec.exe -ArgumentList "/i chromeremotedesktophost.msi /qn /norestart /l*v install.log INSTALLDIR=C:\Custom\ChromeRemoteDesktop" -Wait
       shell: powershell
 
-    - name: Set up Chrome Remote Desktop
+    - name: List files and folders in installation folder
       run: |
         $ChromeRemoteDesktopPath = "C:\Custom\ChromeRemoteDesktop"
+        Get-ChildItem -Path $ChromeRemoteDesktopPath -Recurse | Select-Object -Property FullName
+      shell: powershell
+
+    - name: Set up Chrome Remote Desktop
+      run: |
         $RemotingStartPath = Join-Path -Path $ChromeRemoteDesktopPath -ChildPath "remoting_start.exe"
         & "$RemotingStartPath" --code="${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$env:COMPUTERNAME
       shell: powershell
