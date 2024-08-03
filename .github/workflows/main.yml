@@ -10,42 +10,17 @@ jobs:
         $URL = "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi"
         $OutputPath = "$env:TEMP\chromeremotedesktophost.msi"
         bitsadmin /transfer ChromeRemoteDesktopDownload /download /priority normal $URL $OutputPath
-        Start-Process msiexec.exe -ArgumentList "/i $OutputPath /qn /norestart /l*v install_log.txt" -Wait -NoNewWindow
-        Get-Content install_log.txt
+        Start-Process msiexec.exe -ArgumentList "/i $OutputPath /qn /norestart" -Wait -NoNewWindow
       shell: powershell
 
-    - name: Diagnostic Information
+    - name: Set up Chrome Remote Desktop
       run: |
-        Write-Output "Searching for Chrome Remote Desktop installation..."
-        Get-ChildItem -Path "C:\Program Files" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq "remoting_start_host.exe" }
-        Get-ChildItem -Path "C:\Program Files (x86)" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq "remoting_start_host.exe" }
-        
-        Write-Output "Checking Windows Installer logs..."
-        Get-ChildItem -Path $env:WINDIR\Installer\*.log | Where-Object { Select-String -Path $_.FullName -Pattern "Chrome Remote Desktop" -Quiet } | ForEach-Object {
-          Write-Output "Found potential log file: $($_.FullName)"
-          Get-Content $_.FullName | Select-String -Pattern "Chrome Remote Desktop"
-        }
-        
-        Write-Output "Checking system PATH..."
-        $env:Path -split ';'
-      shell: powershell
-
-    - name: Attempt to Set up Chrome Remote Desktop
-      run: |
-        $PossiblePaths = @(
-          "C:\Program Files\Google\Chrome Remote Desktop\remoting_start_host.exe",
-          "C:\Program Files (x86)\Google\Chrome Remote Desktop\remoting_start_host.exe",
-          "${env:ProgramFiles}\Google\Chrome Remote Desktop\remoting_start_host.exe",
-          "${env:ProgramFiles(x86)}\Google\Chrome Remote Desktop\remoting_start_host.exe"
-        )
-        
-        $Path = $PossiblePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
-        
-        if ($Path) {
+        $Path = "C:\Program Files (x86)\Google\Chrome Remote Desktop\CurrentVersion\remoting_start_host.exe"
+        if (Test-Path $Path) {
           Write-Output "Found remoting_start_host.exe at: $Path"
           & $Path --code="${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$env:COMPUTERNAME
         } else {
-          Write-Error "Could not find remoting_start_host.exe. Installation may have failed."
+          Write-Error "Could not find remoting_start_host.exe at expected location: $Path"
           exit 1
         }
       shell: powershell
