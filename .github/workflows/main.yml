@@ -13,10 +13,26 @@ jobs:
         Start-Process msiexec.exe -ArgumentList "/i $OutputPath /qn /norestart" -Wait -NoNewWindow
       shell: powershell
 
-    - name: Set up Chrome Remote Desktop
+    - name: Locate and Set up Chrome Remote Desktop
       run: |
-        $Path = "C:\Program Files (x86)\Google\Chrome Remote Desktop\remoting_start_host.exe"
-        & $Path --code="${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$env:COMPUTERNAME
+        $PossiblePaths = @(
+          "C:\Program Files\Google\Chrome Remote Desktop\remoting_start_host.exe",
+          "C:\Program Files (x86)\Google\Chrome Remote Desktop\remoting_start_host.exe",
+          "${env:ProgramFiles}\Google\Chrome Remote Desktop\remoting_start_host.exe",
+          "${env:ProgramFiles(x86)}\Google\Chrome Remote Desktop\remoting_start_host.exe"
+        )
+        
+        $Path = $PossiblePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+        
+        if ($Path) {
+          Write-Output "Found remoting_start_host.exe at: $Path"
+          & $Path --code="${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$env:COMPUTERNAME
+        } else {
+          Write-Error "Could not find remoting_start_host.exe. Installation may have failed."
+          Get-ChildItem -Path "C:\Program Files" -Recurse | Where-Object { $_.Name -eq "remoting_start_host.exe" }
+          Get-ChildItem -Path "C:\Program Files (x86)" -Recurse | Where-Object { $_.Name -eq "remoting_start_host.exe" }
+          exit 1
+        }
       shell: powershell
       env:
         CHROME_REMOTE_DESKTOP_CODE: ${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}
