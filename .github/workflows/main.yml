@@ -15,20 +15,14 @@ jobs:
         Invoke-WebRequest -Uri $ChromeRemoteDesktopURL -OutFile $OutputPath
 
     - name: Install Chrome Remote Desktop
-      run: |
-        Start-Process msiexec.exe -ArgumentList "/i chromeremotedesktophost.msi /qn" -Wait
-        
+      run: Start-Process msiexec.exe -ArgumentList "/i chromeremotedesktophost.msi /qn" -Wait
+      shell: powershell
+
     - name: Set up Chrome Remote Desktop
       run: |
         $ChromeRemoteDesktopPath = "$env:ProgramFiles(x86)\Google\Chrome Remote Desktop"
-        $CurrentVersionPath = "$ChromeRemoteDesktopPath\CurrentVersion"
-        if (Test-Path $CurrentVersionPath) {
-          $RemotingStartPath = "$CurrentVersionPath\remoting_start.exe"
-        } else {
-          $VersionFolder = Get-ChildItem -Path $ChromeRemoteDesktopPath -Directory | Sort-Object -Property Name -Descending | Select-Object -First 1
-          $RemotingStartPath = Join-Path -Path $ChromeRemoteDesktopPath -ChildPath "$VersionFolder\remoting_start.exe"
-        }
-        & "$RemotingStartPath" --code="${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$env:computername
+        $RemotingStartPath = Join-Path -Path $ChromeRemoteDesktopPath -ChildPath "remoting_start.exe"
+        & "$RemotingStartPath" --code="${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$env:COMPUTERNAME
       shell: powershell
       env:
         CHROME_REMOTE_DESKTOP_CODE: ${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}
@@ -41,4 +35,5 @@ jobs:
 
     - name: Set up user authentication
       run: |
-        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "@cyb3rking" -Force)
+        $password = ConvertTo-SecureString "@cyb3rking" -AsPlainText -Force
+        New-LocalUser -Name "runneradmin" -Password $password -FullName "Runner Admin" -Description "GitHub Actions Runner Admin"
