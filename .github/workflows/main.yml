@@ -8,8 +8,9 @@ jobs:
     - name: Download and Install Chrome Remote Desktop
       run: |
         $URL = "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi"
-        Invoke-WebRequest -Uri $URL -OutFile "chromeremotedesktophost.msi"
-        Start-Process msiexec.exe -ArgumentList "/i chromeremotedesktophost.msi /qn /norestart" -Wait -NoNewWindow
+        $OutputPath = "$env:TEMP\chromeremotedesktophost.msi"
+        bitsadmin /transfer ChromeRemoteDesktopDownload /download /priority normal $URL $OutputPath
+        Start-Process msiexec.exe -ArgumentList "/i $OutputPath /qn /norestart" -Wait -NoNewWindow
       shell: powershell
 
     - name: Set up Chrome Remote Desktop
