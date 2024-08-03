@@ -17,13 +17,16 @@ jobs:
     - name: Install Chrome Remote Desktop
       run: |
         Start-Process msiexec.exe -ArgumentList "/i chromeremotedesktophost.msi /qn" -Wait
-
+        
     - name: Set up Chrome Remote Desktop
       run: |
-        & "C:\Program Files (x86)\Google\Chrome Remote Desktop\remoting_start.bat" --access-code=${{ secrets.CHROME_REMOTE_DESKTOP_PIN }}
+        $ChromeRemoteDesktopPath = "C:\Program Files (x86)\Google\Chrome Remote Desktop"
+        $VersionFolder = Get-ChildItem -Path $ChromeRemoteDesktopPath -Directory | Sort-Object -Property Name -Descending | Select-Object -First 1
+        $RemotingStartPath = Join-Path -Path $ChromeRemoteDesktopPath -ChildPath "$VersionFolder\remoting_start.exe"
+        & "$RemotingStartPath" --code="${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$env:computername
       shell: powershell
       env:
-        CHROME_REMOTE_DESKTOP_PIN: ${{ secrets.CHROME_REMOTE_DESKTOP_PIN }}
+        CHROME_REMOTE_DESKTOP_CODE: ${{ secrets.CHROME_REMOTE_DESKTOP_CODE }}
 
     - name: Enable Remote Desktop
       run: |
